@@ -1,9 +1,8 @@
 # Map data
 
-`countries.json` (globe at rest and country lookup) and `countries-coarse.json`
-(globe while moving) are built by `tools/build-countries.sh` from Natural Earth's
+`countries.json` is built by `tools/build-countries.sh` from Natural Earth's
 Admin 0 Countries data (v5.1.2). Geometry comes from the 1:50m dataset, simplified
-topologically with mapshaper (`keep-shapes`, 15% and 4% of vertices) so shared
+topologically with mapshaper (`keep-shapes`, 15% of vertices) so shared
 borders stay aligned. The country set and names follow the 1:110m dataset;
 Somaliland and Northern Cyprus use the codes SO and CY.
 Natural Earth data is in the public domain.

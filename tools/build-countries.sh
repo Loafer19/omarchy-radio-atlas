@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# Rebuild assets/countries.json (detail) and assets/countries-coarse.json (used
-# while the globe moves) from Natural Earth Admin 0 Countries.
+# Rebuild assets/countries.json from Natural Earth Admin 0 Countries.
 #
 # Requires curl, jq and mapshaper (npx is used when mapshaper is not on PATH).
 # Country set and names follow the 1:110m data (ADMIN field); geometry comes from
-# 1:50m and is simplified topologically, so shared borders stay aligned and no
-# gaps open between neighbours at either detail level.
+# 1:50m and is simplified topologically, so shared borders stay aligned.
 set -euo pipefail
 
 version=${NATURAL_EARTH_VERSION:-v5.1.2}
 detail=${DETAIL_KEEP:-15%}
-coarse=${COARSE_KEEP:-4%}
 project_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -35,4 +32,3 @@ build() {
 }
 
 build "$detail" "$project_dir/assets/countries.json"
-build "$coarse" "$project_dir/assets/countries-coarse.json"

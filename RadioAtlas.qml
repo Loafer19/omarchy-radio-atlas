@@ -17,7 +17,6 @@ Item {
 
   property bool opened: false
   property var countries: []
-  property var coarseCountries: []
   readonly property var countryNames: {
     try {
       return JSON.parse(countryNamesFile.text() || "{}")
@@ -864,20 +863,6 @@ Item {
   }
 
   FileView {
-    path: Qt.resolvedUrl("assets/countries-coarse.json").toString().replace(/^file:\/\//, "")
-    watchChanges: false
-    printErrors: true
-    onLoaded: {
-      try {
-        var collection = JSON.parse(text())
-        root.coarseCountries = Array.isArray(collection.features) ? collection.features : []
-      } catch (error) {
-        root.coarseCountries = []
-      }
-    }
-  }
-
-  FileView {
     path: Qt.resolvedUrl("assets/countries.json").toString().replace(/^file:\/\//, "")
     watchChanges: false
     printErrors: true
@@ -1636,7 +1621,6 @@ Item {
             anchors.fill: parent
             anchors.margins: Style.spacing.lg
             countries: root.countries
-            coarseCountries: root.coarseCountries
             stations: root.currentGeoStations
             selectedStation: root.playingStation || root.selectedStation
             activeCountryCode: root.activeCountryCode
