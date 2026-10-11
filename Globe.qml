@@ -5,6 +5,8 @@ Item {
   id: root
 
   property var countries: []
+  // Lower-detail outlines (same topology) painted while the globe moves.
+  property var coarseCountries: []
   property var stations: []
   property var selectedStation: null
   readonly property string selectedStationUuid: selectedStation ? String(selectedStation.uuid || "") : ""
@@ -47,6 +49,9 @@ Item {
   property int kineticLaunchGeneration: 0
   property bool suppressNextTap: false
   property var preparedCountries: []
+  property var preparedCoarseCountries: []
+  readonly property bool moving: dragHandler.active || kineticAnimation.running
+    || zoomAnimation.running || wheelSettle.running
   property var preparedGrid: []
   property var preparedStations: []
 
@@ -211,9 +216,9 @@ Item {
     return output
   }
 
-  function prepareCountryGeometry() {
+  function prepareCountryGeometry(source) {
     var output = []
-    var rows = Array.isArray(countries) ? countries : []
+    var rows = Array.isArray(source) ? source : []
     for (var i = 0; i < rows.length; i++) {
       var feature = rows[i]
       if (!feature || !feature.geometry) continue
@@ -312,7 +317,8 @@ Item {
   }
 
   function paintCountries(ctx, centreX, centreY, globeRadius) {
-    var rows = preparedCountries
+    var rows = moving && preparedCoarseCountries.length > 0
+      ? preparedCoarseCountries : preparedCountries
     var latitude = centreLatitude * Math.PI / 180
     var longitude = centreLongitude * Math.PI / 180
     var sinLatitude = Math.sin(latitude)
@@ -552,8 +558,10 @@ Item {
     countryActivated(String(country.code).toUpperCase(), String(country.name || country.code))
   }
 
+  onCoarseCountriesChanged: preparedCoarseCountries = prepareCountryGeometry(coarseCountries)
+  onMovingChanged: globeCanvas.requestPaint()
   onCountriesChanged: {
-    preparedCountries = prepareCountryGeometry()
+    preparedCountries = prepareCountryGeometry(countries)
     globeCanvas.requestPaint()
     if (activeCountryCode) focusCountry(activeCountryCode)
   }
@@ -617,7 +625,8 @@ Item {
 
   Component.onCompleted: {
     preparedGrid = prepareGridGeometry()
-    preparedCountries = prepareCountryGeometry()
+    preparedCountries = prepareCountryGeometry(countries)
+    preparedCoarseCountries = prepareCountryGeometry(coarseCountries)
     preparedStations = prepareStationGeometry()
     globeCanvas.requestPaint()
   }
@@ -787,11 +796,17 @@ Item {
       root.stopZoomAnimation()
       root.suppressNextTap = false
       root.hoveredStation = null
+      wheelSettle.restart()
       var factor = Math.exp(event.angleDelta.y / 720)
       root.globeScale = RadioModel.clamp(
         root.globeScale * factor, root.minimumScale, root.maximumScale)
       event.accepted = true
     }
+  }
+
+  Timer {
+    id: wheelSettle
+    interval: 160
   }
 
   FrameAnimation {
