@@ -320,12 +320,20 @@ Item {
     var sinLongitude = Math.sin(longitude)
     var cosLongitude = Math.cos(longitude)
     var activeCode = activeCountryCode.toUpperCase()
+    var landFill = withAlpha(landColor, 0.9)
+    var landStroke = withAlpha(outlineColor, 0.34)
+    var activeFill = withAlpha(accentColor, 0.38)
+    var activeStroke = withAlpha(accentColor, 0.95)
+    var styledActive = null
     for (var i = 0; i < rows.length; i++) {
       var country = rows[i]
       var active = country.code === activeCode
-      ctx.fillStyle = active ? withAlpha(accentColor, 0.38) : withAlpha(landColor, 0.9)
-      ctx.strokeStyle = active ? withAlpha(accentColor, 0.95) : withAlpha(outlineColor, 0.34)
-      ctx.lineWidth = active ? 1.5 : 0.7
+      if (active !== styledActive) {
+        ctx.fillStyle = active ? activeFill : landFill
+        ctx.strokeStyle = active ? activeStroke : landStroke
+        ctx.lineWidth = active ? 1.5 : 0.7
+        styledActive = active
+      }
 
       for (var ringIndex = 0; ringIndex < country.rings.length; ringIndex++) {
         var geometry = country.rings[ringIndex]
@@ -485,25 +493,12 @@ Item {
     var globeRadius = radius()
     if (!isFinite(globeRadius) || globeRadius <= 0) return
 
+    // Background and the shaded sphere live on sphereCanvas, which only
+    // repaints on size, zoom or colour changes, not on every rotation.
     ctx.reset()
-    ctx.fillStyle = backgroundColor
-    ctx.fillRect(0, 0, globeCanvas.width, globeCanvas.height)
-
-    var sphere = ctx.createRadialGradient(
-      centreX - globeRadius * 0.28, centreY - globeRadius * 0.32, globeRadius * 0.04,
-      centreX, centreY, globeRadius)
-    sphere.addColorStop(0, withAlpha(Qt.lighter(sphereColor, 1.7), 1))
-    sphere.addColorStop(0.62, sphereColor)
-    sphere.addColorStop(1, Qt.darker(sphereColor, 1.8))
-    ctx.beginPath()
-    ctx.arc(centreX, centreY, globeRadius, 0, Math.PI * 2)
-    ctx.fillStyle = sphere
-    ctx.fill()
+    ctx.clearRect(0, 0, globeCanvas.width, globeCanvas.height)
 
     ctx.save()
-    ctx.beginPath()
-    ctx.arc(centreX, centreY, globeRadius - 0.5, 0, Math.PI * 2)
-    ctx.clip()
     paintGrid(ctx, centreX, centreY, globeRadius)
     paintCountries(ctx, centreX, centreY, globeRadius)
     paintSignals(ctx)
@@ -567,8 +562,7 @@ Item {
     globeCanvas.requestPaint()
   }
   onActiveCountryCodeChanged: globeCanvas.requestPaint()
-  onBackgroundColorChanged: globeCanvas.requestPaint()
-  onSphereColorChanged: globeCanvas.requestPaint()
+  onSphereColorChanged: sphereCanvas.requestPaint()
   onLandColorChanged: globeCanvas.requestPaint()
   onGridColorChanged: globeCanvas.requestPaint()
   onOutlineColorChanged: globeCanvas.requestPaint()
@@ -584,14 +578,17 @@ Item {
   }
   onGlobeScaleChanged: {
     updateHighlightPosition()
+    sphereCanvas.requestPaint()
     globeCanvas.requestPaint()
   }
   onWidthChanged: {
     updateHighlightPosition()
+    sphereCanvas.requestPaint()
     globeCanvas.requestPaint()
   }
   onHeightChanged: {
     updateHighlightPosition()
+    sphereCanvas.requestPaint()
     globeCanvas.requestPaint()
   }
   onHighlightedStationChanged: {
@@ -602,6 +599,36 @@ Item {
     if (!visible) {
       stopKineticRotation(true)
       stopZoomAnimation()
+    }
+  }
+
+  Rectangle {
+    anchors.fill: parent
+    color: root.backgroundColor
+  }
+
+  Canvas {
+    id: sphereCanvas
+    anchors.fill: parent
+    renderStrategy: Canvas.Cooperative
+    onPaint: {
+      var ctx = getContext("2d")
+      if (!ctx) return
+      ctx.reset()
+      var globeRadius = root.radius()
+      if (!isFinite(globeRadius) || globeRadius <= 0) return
+      var centreX = width / 2
+      var centreY = height / 2
+      var sphere = ctx.createRadialGradient(
+        centreX - globeRadius * 0.28, centreY - globeRadius * 0.32, globeRadius * 0.04,
+        centreX, centreY, globeRadius)
+      sphere.addColorStop(0, root.withAlpha(Qt.lighter(root.sphereColor, 1.7), 1))
+      sphere.addColorStop(0.62, root.sphereColor)
+      sphere.addColorStop(1, Qt.darker(root.sphereColor, 1.8))
+      ctx.beginPath()
+      ctx.arc(centreX, centreY, globeRadius, 0, Math.PI * 2)
+      ctx.fillStyle = sphere
+      ctx.fill()
     }
   }
 
